@@ -44,7 +44,7 @@ app.post('/api/commit', async (req, res) => {
       const { data } = await octokit.rest.repos.getContent({
         owner: OWNER,
         repo: REPO,
-        path: 'test.txt',
+        path: 'logic.yaml',
         ref: BRANCH,
       });
       if (!Array.isArray(data)) {
@@ -60,7 +60,7 @@ app.post('/api/commit', async (req, res) => {
     const params: any = {
       owner: OWNER,
       repo: REPO,
-      path: 'test.txt',
+      path: 'logic.yaml',
       message: title,
       content: Buffer.from(content).toString('base64'),
       branch: BRANCH,

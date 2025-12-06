@@ -79,7 +79,7 @@ function App() {
           disabled={loading || !title.trim() || !content.trim()}
           className="commit-button"
         >
-          {loading ? 'Committing...' : 'Commit to test.txt'}
+          {loading ? 'Committing...' : 'Commit to logic.yaml'}
         </button>
 
         {message && (

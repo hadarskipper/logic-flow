@@ -25,7 +25,7 @@ async function testGitHubPAT() {
       const { data } = await octokit.rest.repos.getContent({
         owner: OWNER,
         repo: REPO,
-        path: 'test.txt',
+        path: 'logic.yaml',
         ref: BRANCH,
       });
       if (!Array.isArray(data)) {
@@ -40,8 +40,8 @@ async function testGitHubPAT() {
     const params: any = {
       owner: OWNER,
       repo: REPO,
-      path: 'test.txt',
-      message: 'test: Add test.txt file to verify GitHub PAT',
+      path: 'logic.yaml',
+      message: 'test: Add logic.yaml file to verify GitHub PAT',
       content: Buffer.from(content).toString('base64'),
       branch: BRANCH,
     };
@@ -53,7 +53,7 @@ async function testGitHubPAT() {
     console.log('SUCCESS! GitHub PAT is valid and working.');
     console.log(`File pushed to ${OWNER}/${REPO}:${BRANCH}`);
     if (commitSha) console.log(`Commit: ${commitSha.substring(0, 7)}`);
-    console.log(`View: https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/test.txt`);
+    console.log(`View: https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/logic.yaml`);
 
   } catch (error: any) {
     console.error('ERROR: GitHub PAT test failed!');
