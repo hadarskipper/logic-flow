@@ -13,6 +13,11 @@ yarn.lock
 dist/
 *.tsbuildinfo
 
+# Vite / React
+client/dist/
+client/.vite/
+client/node_modules/
+
 # Common development files
 __pycache__/
 *.py[cod]
