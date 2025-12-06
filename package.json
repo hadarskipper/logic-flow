@@ -1,0 +1,22 @@
+{
+  "name": "logic-flow",
+  "version": "1.0.0",
+  "description": "Logic Flow Project",
+  "main": "index.js",
+  "scripts": {
+    "test:github": "ts-node test-github-pat.ts",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@octokit/rest": "^20.0.2"
+  }
+}
+
