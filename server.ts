@@ -26,6 +26,61 @@ function getSecrets() {
   return secrets;
 }
 
+// Fetch latest logic.yaml content endpoint
+app.get('/api/fetch', async (req, res) => {
+  try {
+    const secrets = getSecrets();
+    const octokit = new Octokit({ auth: secrets.github.pat });
+
+    // Get the latest content of logic.yaml
+    const { data } = await octokit.rest.repos.getContent({
+      owner: OWNER,
+      repo: REPO,
+      path: 'logic.yaml',
+      ref: BRANCH,
+    });
+
+    if (Array.isArray(data)) {
+      return res.status(400).json({ error: 'logic.yaml is a directory, not a file' });
+    }
+
+    // Check if it's a file type
+    if (data.type !== 'file' || !('content' in data)) {
+      return res.status(400).json({ error: 'logic.yaml is not a regular file' });
+    }
+
+    // Decode the content (it's base64 encoded)
+    const content = Buffer.from(data.content, 'base64').toString('utf-8');
+    const commitSha = data.sha;
+
+    res.json({
+      success: true,
+      content,
+      commitSha,
+    });
+  } catch (error: any) {
+    console.error('Fetch error:', error);
+    
+    let errorMessage = 'Failed to fetch file';
+    if (error.status === 401) {
+      errorMessage = 'Authentication failed. Check your GitHub PAT';
+    } else if (error.status === 403) {
+      errorMessage = 'Access forbidden. PAT needs "repo" permission';
+    } else if (error.status === 404) {
+      // File doesn't exist yet, return empty content
+      return res.json({
+        success: true,
+        content: '',
+        commitSha: null,
+      });
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    res.status(error.status || 500).json({ error: errorMessage });
+  }
+});
+
 // Commit endpoint
 app.post('/api/commit', async (req, res) => {
   try {

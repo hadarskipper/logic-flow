@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 import EditSection from './components/EditSection';
 import PreviewSection from './components/PreviewSection';
@@ -11,6 +11,33 @@ import { useTest } from './hooks/useTest';
 function App() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [loadingInitialContent, setLoadingInitialContent] = useState(true);
+
+  // Fetch latest logic.yaml content on mount
+  useEffect(() => {
+    const fetchLatestContent = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/fetch');
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          if (data.content) {
+            setContent(data.content);
+          }
+          // Optionally set the latest commit SHA if available
+          if (data.commitSha) {
+            // This will be handled by useCommit hook when needed
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch initial content:', error);
+      } finally {
+        setLoadingInitialContent(false);
+      }
+    };
+
+    fetchLatestContent();
+  }, []);
 
   const parsedTreeData = useYamlParser(content);
   const handleNodeClick = useNodeClickHandler(content);
@@ -30,7 +57,7 @@ function App() {
           <EditSection
             title={title}
             content={content}
-            loading={loading}
+            loading={loading || loadingInitialContent}
             message={message}
             onTitleChange={setTitle}
             onContentChange={setContent}
