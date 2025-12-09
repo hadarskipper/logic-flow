@@ -3,26 +3,42 @@ export function useNodeClickHandler(content: string) {
     const textarea = document.getElementById('content') as HTMLTextAreaElement;
     if (!textarea || !content) return;
 
-    // Find the node section in YAML - look for "  nodeId:" (with indentation under nodes:)
-    const nodePattern = new RegExp(`^\\s{2,}${nodeId}:\\s*$`, 'm');
+    // Find the node section in YAML - match "nodeId:" anywhere in the line
+    // We'll calculate indentation from the actual line content
+    const nodePattern = new RegExp(`${nodeId}:`, 'm');
     const match = content.match(nodePattern);
     
     if (!match) return;
 
     const lines = content.split('\n');
+    const matchIndex = match.index!;
     
-    // Find the line number where the node starts
-    let startLine = 0;
-    let charCount = 0;
-    for (let i = 0; i < lines.length; i++) {
-      if (match.index! >= charCount && match.index! < charCount + lines[i].length + 1) {
-        startLine = i;
-        break;
+    // Find which line contains the match by tracking character positions explicitly
+    // This is more deterministic than counting newlines
+    function findLineContainingIndex(targetIndex: number): number {
+      let currentPos = 0;
+      
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const lineLength = lines[lineIndex].length;
+        const lineStartPos = currentPos;
+        const lineEndPos = currentPos + lineLength; // Position at end of this line (before newline)
+        
+        // Check if targetIndex falls within this line
+        // (between start of line and end of line content, not including the newline)
+        if (targetIndex >= lineStartPos && targetIndex < lineEndPos + 1) {
+          return lineIndex;
+        }
+        
+        // Move to next line: current line + newline character
+        currentPos = lineEndPos + 1;
       }
-      charCount += lines[i].length + 1; // +1 for newline
+      return -1; // Should not happen if match was found
     }
     
-    // Get the indent level of the nodeId line
+    const startLine = findLineContainingIndex(matchIndex);
+    if (startLine === -1) return; // Safety check
+    
+    // Get the indent level from the actual line content (not from the regex match)
     const nodeLine = lines[startLine];
     const nodeIndentMatch = nodeLine.match(/^(\s*)/);
     const nodeIndent = nodeIndentMatch ? nodeIndentMatch[1].length : 0;
@@ -36,7 +52,7 @@ export function useNodeClickHandler(content: string) {
       const trimmed = line.trim();
       
       if (trimmed === '') {
-        // Empty line - continue to next line
+        // Empty line - continue to next line (but keep it in selection if it's between node properties)
         endLine = i + 1;
         continue;
       }
@@ -60,26 +76,30 @@ export function useNodeClickHandler(content: string) {
       endLine = i + 1;
     }
     
-    // Calculate start position - beginning of the nodeId line
-    let startPos = 0;
-    for (let i = 0; i < startLine; i++) {
-      startPos += lines[i].length + 1; // +1 for newline
+    // Calculate character positions by building them from lines
+    // This is clearer than separate position calculations
+    function calculatePositionUpToLine(lineIndex: number, includeLineContent: boolean): number {
+      let pos = 0;
+      const endIndex = includeLineContent ? lineIndex + 1 : lineIndex;
+      
+      for (let i = 0; i < endIndex; i++) {
+        if (i < lines.length) {
+          pos += lines[i].length;
+          // Add newline after each line except the last line of content
+          if (i < lines.length - 1) {
+            pos += 1;
+          }
+        }
+      }
+      
+      return pos;
     }
     
-    // Calculate end position - end of the last line of the node definition
-    let endPos = startPos;
-    // Add all lines from startLine to endLine (exclusive of endLine)
-    for (let i = startLine; i < endLine; i++) {
-      endPos += lines[i].length;
-      // Add newline after each line (if there's a next line, either in selection or after)
-      if (i < endLine - 1) {
-        // There's another line in the selection
-        endPos += 1;
-      } else if (i === endLine - 1 && endLine < lines.length) {
-        // This is the last selected line, but there's more content after
-        endPos += 1;
-      }
-    }
+    // Start position: beginning of the startLine
+    const startPos = calculatePositionUpToLine(startLine, false);
+    
+    // End position: end of the last line in the selection (endLine is exclusive)
+    const endPos = calculatePositionUpToLine(endLine, false);
     
     // Select and scroll to the text
     textarea.focus();
