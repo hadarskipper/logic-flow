@@ -86,9 +86,10 @@ const nodeTypes: NodeTypes = {
 
 interface FlowGraphProps {
   treeData: any;
+  onNodeClick?: (nodeId: string) => void;
 }
 
-function FlowGraphInner({ treeData }: FlowGraphProps) {
+function FlowGraphInner({ treeData, onNodeClick }: FlowGraphProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
 
@@ -354,6 +355,11 @@ function FlowGraphInner({ treeData }: FlowGraphProps) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={(_event, node) => {
+          if (onNodeClick && node.id !== 'start') {
+            onNodeClick(node.id);
+          }
+        }}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -366,10 +372,10 @@ function FlowGraphInner({ treeData }: FlowGraphProps) {
   );
 }
 
-function FlowGraph({ treeData }: FlowGraphProps) {
+function FlowGraph({ treeData, onNodeClick }: FlowGraphProps) {
   return (
     <ReactFlowProvider>
-      <FlowGraphInner treeData={treeData} />
+      <FlowGraphInner treeData={treeData} onNodeClick={onNodeClick} />
     </ReactFlowProvider>
   );
 }
