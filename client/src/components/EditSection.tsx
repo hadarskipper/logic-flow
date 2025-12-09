@@ -36,7 +36,7 @@ export default function EditSection({
       </div>
 
       <div className="form-group">
-        <label htmlFor="content">Code Content:</label>
+        <label htmlFor="content">YAML Content:</label>
         <textarea
           id="content"
           value={content}

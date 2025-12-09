@@ -16,7 +16,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 // Custom diamond node for condition nodes
-const DiamondNode = ({ data }: { data: any }) => {
+const DiamondNode = ({ data, id }: { data: any; id: string }) => {
   const size = 120; // Perfect square size
   return (
     <div
@@ -73,7 +73,7 @@ const DiamondNode = ({ data }: { data: any }) => {
           {data.nodeName}
         </div>
         <div style={{ fontSize: '11px', color: '#666' }}>
-          {data.nodeType}
+          {data.nodeType} ({id})
         </div>
       </div>
     </div>
@@ -180,6 +180,7 @@ function FlowGraphInner({ treeData, onNodeClick }: FlowGraphProps) {
           data: {
             nodeName: node.name || nodeId,
             nodeType: node.type,
+            nodeId: nodeId,
           },
         });
       } else {
@@ -224,7 +225,7 @@ function FlowGraphInner({ treeData, onNodeClick }: FlowGraphProps) {
                   {node.name || nodeId}
                 </div>
                 <div style={{ fontSize: '12px', color: '#666' }}>
-                  {node.type}
+                  {node.type} ({nodeId})
                 </div>
               </div>
             ),
