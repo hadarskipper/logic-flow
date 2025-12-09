@@ -53,7 +53,7 @@ function App() {
         }
         setMessage({ 
           type: 'success', 
-          text: `Success! Committed with SHA: ${commitSha?.substring(0, 7) || 'N/A'}` 
+          text: `Success! Committed with SHA: ${commitSha?.substring(0, 8) || 'N/A'}` 
         });
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to commit' });
@@ -84,7 +84,7 @@ function App() {
       formData.append('audio_file', emptyMp3File);
       
       setTerminalOutput(prev => prev + `Sending request to /process-call...\n`);
-      setTerminalOutput(prev => prev + `Commit SHA: ${latestCommitSha.substring(0, 7)}\n`);
+      setTerminalOutput(prev => prev + `Commit SHA: ${latestCommitSha.substring(0, 8)}\n`);
       setTerminalOutput(prev => prev + `Call ID: 1\n`);
       setTerminalOutput(prev => prev + `Filename: empty.mp3\n\n`);
       

@@ -10,16 +10,19 @@ import ReactFlow, {
   NodeTypes,
   MarkerType,
   ReactFlowProvider,
+  Handle,
+  Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
 // Custom diamond node for condition nodes
 const DiamondNode = ({ data }: { data: any }) => {
+  const size = 120; // Perfect square size
   return (
     <div
       style={{
-        width: '180px',
-        height: '100px',
+        width: `${size}px`,
+        height: `${size}px`,
         background: '#fef3c7',
         border: '2px solid #f59e0b',
         display: 'flex',
@@ -27,8 +30,37 @@ const DiamondNode = ({ data }: { data: any }) => {
         justifyContent: 'center',
         transform: 'rotate(45deg)',
         borderRadius: '8px',
+        position: 'relative',
       }}
     >
+      {/* Connection handles at the corners of the square (before rotation) */}
+      {/* Top-left corner (becomes top point after rotation) - target for incoming edges */}
+      <Handle 
+        type="target" 
+        position={Position.Top}
+        style={{ 
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          right: 'auto',
+          bottom: 'auto',
+          transform: 'none',
+        }} 
+      />
+      {/* Bottom-right corner (becomes bottom point after rotation) - source for all outgoing edges */}
+      <Handle 
+        type="source" 
+        position={Position.Bottom}
+        style={{ 
+          position: 'absolute',
+          right: 0,
+          bottom: 0,
+          left: 'auto',
+          top: 'auto',
+          transform: 'none',
+        }} 
+      />
+      
       <div
         style={{
           transform: 'rotate(-45deg)',
@@ -97,15 +129,21 @@ function FlowGraphInner({ treeData }: FlowGraphProps) {
 
       const nodeConfig = node.node_config || {};
 
-      // For condition nodes, add both true_node and false_node
+      // For condition nodes, add next_nodes and no_match_node
       if (node.type === 'condition') {
-        if (nodeConfig.true_node && !nodeLevel.has(nodeConfig.true_node)) {
-          nodeLevel.set(nodeConfig.true_node, level + 1);
-          queue.push({ nodeId: nodeConfig.true_node, level: level + 1 });
+        // Handle next_nodes array
+        if (nodeConfig.next_nodes && Array.isArray(nodeConfig.next_nodes)) {
+          nodeConfig.next_nodes.forEach((nextNodeId: string) => {
+            if (nextNodeId && !nodeLevel.has(nextNodeId)) {
+              nodeLevel.set(nextNodeId, level + 1);
+              queue.push({ nodeId: nextNodeId, level: level + 1 });
+            }
+          });
         }
-        if (nodeConfig.false_node && !nodeLevel.has(nodeConfig.false_node)) {
-          nodeLevel.set(nodeConfig.false_node, level + 1);
-          queue.push({ nodeId: nodeConfig.false_node, level: level + 1 });
+        // Handle no_match_node
+        if (nodeConfig.no_match_node && !nodeLevel.has(nodeConfig.no_match_node)) {
+          nodeLevel.set(nodeConfig.no_match_node, level + 1);
+          queue.push({ nodeId: nodeConfig.no_match_node, level: level + 1 });
         }
       } else if (node.next_node && !nodeLevel.has(node.next_node)) {
         nodeLevel.set(node.next_node, level + 1);
@@ -195,32 +233,41 @@ function FlowGraphInner({ treeData }: FlowGraphProps) {
       }
     });
 
+    // Create a set of valid node IDs for validation
+    const validNodeIds = new Set(Object.keys(treeNodes));
+
     // Create edges
     Object.keys(treeNodes).forEach((nodeId) => {
       const node = treeNodes[nodeId];
       const nodeConfig = node.node_config || {};
 
       if (node.type === 'condition') {
-        if (nodeConfig.true_node) {
-          newEdges.push({
-            id: `${nodeId}-${nodeConfig.true_node}-true`,
-            source: nodeId,
-            target: nodeConfig.true_node,
-            label: 'Yes',
-            labelStyle: { fill: '#10b981', fontWeight: 600 },
-            style: { stroke: '#10b981', strokeWidth: 2 },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: '#10b981',
-            },
+        // Handle next_nodes array (match condition)
+        if (nodeConfig.next_nodes && Array.isArray(nodeConfig.next_nodes)) {
+          nodeConfig.next_nodes.forEach((nextNodeId: string, index: number) => {
+            if (nextNodeId && validNodeIds.has(nextNodeId)) {
+              newEdges.push({
+                id: `${nodeId}-${nextNodeId}-match-${index}`,
+                source: nodeId,
+                target: nextNodeId,
+                label: 'Match',
+                labelStyle: { fill: '#10b981', fontWeight: 600 },
+                style: { stroke: '#10b981', strokeWidth: 2 },
+                markerEnd: {
+                  type: MarkerType.ArrowClosed,
+                  color: '#10b981',
+                },
+              });
+            }
           });
         }
-        if (nodeConfig.false_node) {
+        // Handle no_match_node
+        if (nodeConfig.no_match_node && validNodeIds.has(nodeConfig.no_match_node)) {
           newEdges.push({
-            id: `${nodeId}-${nodeConfig.false_node}-false`,
+            id: `${nodeId}-${nodeConfig.no_match_node}-no-match`,
             source: nodeId,
-            target: nodeConfig.false_node,
-            label: 'No',
+            target: nodeConfig.no_match_node,
+            label: 'No Match',
             labelStyle: { fill: '#ef4444', fontWeight: 600 },
             style: { stroke: '#ef4444', strokeWidth: 2 },
             markerEnd: {
@@ -229,7 +276,7 @@ function FlowGraphInner({ treeData }: FlowGraphProps) {
             },
           });
         }
-      } else if (node.next_node) {
+      } else if (node.next_node && validNodeIds.has(node.next_node)) {
         newEdges.push({
           id: `${nodeId}-${node.next_node}`,
           source: nodeId,
