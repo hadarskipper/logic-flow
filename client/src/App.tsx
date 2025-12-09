@@ -24,7 +24,7 @@ function App() {
   return (
     <div className="app">
       <div className="container">
-        <h1>GitHub Code Commit</h1>
+        <h1>workflow editor</h1>
         
         <div className="form-section">
           <EditSection
