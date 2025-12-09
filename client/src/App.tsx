@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import * as yaml from 'js-yaml';
+import FlowGraph from './FlowGraph';
 import './App.css';
 
 function App() {
@@ -9,6 +11,20 @@ function App() {
   const [latestCommitSha, setLatestCommitSha] = useState<string | null>(null);
   const [testLoading, setTestLoading] = useState(false);
   const [terminalOutput, setTerminalOutput] = useState<string>('');
+
+  // Parse YAML content into dictionary
+  const parsedTreeData = useMemo(() => {
+    if (!content.trim()) {
+      return null;
+    }
+
+    try {
+      const parsed = yaml.load(content) as any;
+      return parsed?.tree || null;
+    } catch (error) {
+      return null;
+    }
+  }, [content]);
 
   const handleCommit = async () => {
     if (!title.trim() || !content.trim()) {
@@ -85,10 +101,30 @@ function App() {
         setTerminalOutput(prev => prev + 'Response:\n');
         setTerminalOutput(prev => prev + JSON.stringify(data, null, 2) + '\n');
         
-        // Fetch logs after 5 seconds
-        setTerminalOutput(prev => prev + '\n⏳ Waiting 5 seconds before fetching logs...\n');
+        // Fetch results and logs after 5 seconds
+        setTerminalOutput(prev => prev + '\n⏳ Waiting 5 seconds before fetching results and logs...\n');
         setTimeout(async () => {
           try {
+            // First, fetch results
+            setTerminalOutput(prev => prev + '\n📥 Fetching results from /results/1...\n');
+            const resultsUrl = `http://localhost:8000/results/1?commit_sha=${latestCommitSha}`;
+            const resultsResponse = await fetch(resultsUrl);
+            
+            if (resultsResponse.ok) {
+              const resultsData = await resultsResponse.json();
+              setTerminalOutput(prev => prev + '✓ Results retrieved successfully!\n\n');
+              setTerminalOutput(prev => prev + 'Results:\n');
+              setTerminalOutput(prev => prev + '─'.repeat(60) + '\n');
+              setTerminalOutput(prev => prev + JSON.stringify(resultsData, null, 2) + '\n');
+              setTerminalOutput(prev => prev + '─'.repeat(60) + '\n');
+            } else {
+              const errorData = await resultsResponse.json();
+              setTerminalOutput(prev => prev + `✗ Failed to fetch results: ${resultsResponse.status}\n\n`);
+              setTerminalOutput(prev => prev + 'Error:\n');
+              setTerminalOutput(prev => prev + JSON.stringify(errorData, null, 2) + '\n');
+            }
+            
+            // Then fetch logs
             setTerminalOutput(prev => prev + '\n📥 Fetching logs from /logs/1...\n');
             const logsUrl = `http://localhost:8000/logs/1?commit_sha=${latestCommitSha}`;
             const logsResponse = await fetch(logsUrl);
@@ -110,7 +146,7 @@ function App() {
               setTerminalOutput(prev => prev + JSON.stringify(errorData, null, 2) + '\n');
             }
           } catch (error: any) {
-            setTerminalOutput(prev => prev + `✗ Error fetching logs: ${error.message}\n`);
+            setTerminalOutput(prev => prev + `✗ Error fetching results/logs: ${error.message}\n`);
           }
         }, 5000);
       } else {
@@ -131,44 +167,64 @@ function App() {
       <div className="container">
         <h1>GitHub Code Commit</h1>
         
-        <div className="form-group">
-          <label htmlFor="title">Commit Title:</label>
-          <input
-            id="title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter commit message..."
-            className="title-input"
-            disabled={loading}
-          />
-        </div>
+        <div className="form-section">
+          <div className="form-column form-column-left">
+            <h2 className="column-title">Edit</h2>
+            <div className="form-group">
+              <label htmlFor="title">Commit Title:</label>
+              <input
+                id="title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter commit message..."
+                className="title-input"
+                disabled={loading}
+              />
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="content">Code Content:</label>
-          <textarea
-            id="content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Enter your code here..."
-            className="content-textarea"
-            disabled={loading}
-          />
-        </div>
+            <div className="form-group">
+              <label htmlFor="content">Code Content:</label>
+              <textarea
+                id="content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Enter your code here..."
+                className="content-textarea"
+                disabled={loading}
+              />
+            </div>
 
-        <button 
-          onClick={handleCommit} 
-          disabled={loading || !title.trim() || !content.trim()}
-          className="commit-button"
-        >
-          {loading ? 'Committing...' : 'Commit to logic.yaml'}
-        </button>
+            <button 
+              onClick={handleCommit} 
+              disabled={loading || !title.trim() || !content.trim()}
+              className="commit-button"
+            >
+              {loading ? 'Committing...' : 'Commit to logic.yaml'}
+            </button>
 
-        {message && (
-          <div className={`message ${message.type}`}>
-            {message.text}
+            {message && (
+              <div className={`message ${message.type}`}>
+                {message.text}
+              </div>
+            )}
           </div>
-        )}
+
+          <div className="form-column form-column-right">
+            <h2 className="column-title">Preview</h2>
+            <div className="form-group">
+              <label>Commit Title:</label>
+              <div className="title-display">
+                {title || <span className="placeholder-text">Enter commit message...</span>}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Flow Graph:</label>
+              <FlowGraph treeData={parsedTreeData} />
+            </div>
+          </div>
+        </div>
 
         <div className="test-section">
           <h2>Test Section</h2>
